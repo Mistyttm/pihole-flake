@@ -60,10 +60,10 @@
             # the Pi-hole service configuration
             services.pihole = {
               enable = true;
-              hostConfig = {
+              container = {
                 # define the service user for running the rootless Pi-hole container
                 user = "pihole";
-                enableLingeringForUser = true;
+                enableLingering = true;
 
                 # we want to persist change to the Pi-hole configuration & logs across service restarts
                 # check the option descriptions for more information
@@ -74,12 +74,12 @@
                 dnsPort = 5335;
                 webPort = 8080;
               };
-              piholeConfig.ftl = {
+              ftl = {
                 # assuming that the host has this (fixed) IP and should resolve "pi.hole" to this address
                 # check the option description & the FTLDNS documentation for more information
                 LOCAL_IPV4 = "192.168.0.2";
               };
-              piholeConfig.web = {
+              web = {
                 virtualHost = "pi.hole";
                 password = "password";
               };
