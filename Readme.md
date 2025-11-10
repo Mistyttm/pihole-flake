@@ -9,6 +9,25 @@ Further the flake comes with a NixOS module that can be used to configure & run 
 Contrary to NixOS' oci-container support this flake allows to run Pi-hole in a rootless container environment---which is also the main reason why this flake exists.
 Another benefit of using the provided NixOS module is that it explicitly exposes the supported configuration options of the Pi-hole container.
 
+## Usage
+
+To use this flake in your NixOS configuration, add it as an input and import the module:
+
+```nix
+{
+  inputs.pihole.url = "github:Mistyttm/pihole-flake";
+  
+  outputs = { nixpkgs, pihole, ... }: {
+    nixosConfigurations.myhost = nixpkgs.lib.nixosSystem {
+      modules = [
+        pihole.nixosModules.default
+        # ... your other modules
+      ];
+    };
+  };
+}
+```
+
 ## Configuring Pi-hole
 
 All configuration options can be found under the key `service.pihole`.
