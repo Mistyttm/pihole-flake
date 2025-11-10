@@ -18,26 +18,6 @@
         "type": "github"
       }
     },
-    "linger": {
-      "inputs": {
-        "flake-utils": [
-          "flake-utils"
-        ]
-      },
-      "locked": {
-        "lastModified": 1670283645,
-        "narHash": "sha256-SuC/SuQ8RUaM6RthNAkNTSnlpRXJxEmuym2OyPLLpWk=",
-        "owner": "mindsbackyard",
-        "repo": "linger-flake",
-        "rev": "9f8632c0621dc562dd42e9eacfdb6dae82aebf8b",
-        "type": "github"
-      },
-      "original": {
-        "owner": "mindsbackyard",
-        "repo": "linger-flake",
-        "type": "github"
-      }
-    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1762482733,
@@ -56,7 +36,6 @@
     "root": {
       "inputs": {
         "flake-utils": "flake-utils",
-        "linger": "linger",
         "nixpkgs": "nixpkgs"
       }
     },
