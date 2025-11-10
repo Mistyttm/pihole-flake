@@ -7,29 +7,33 @@
     flake-utils.url = "github:numtide/flake-utils";
   };
 
-  outputs = {
-    self,
-    nixpkgs,
-    flake-utils,
-  }:
+  outputs =
+    { self
+    , nixpkgs
+    , flake-utils
+    ,
+    }:
     (with flake-utils.lib;
-      eachSystem (with system; [x86_64-linux aarch64-linux]) (
-        curSystem: let
-          pkgs = nixpkgs.legacyPackages.${curSystem};
+    eachSystem (with system; [ x86_64-linux aarch64-linux ]) (
+      curSystem:
+      let
+        pkgs = nixpkgs.legacyPackages.${curSystem};
 
-          imageInfo = {
-            ${system.x86_64-linux}.pihole = import ./pihole-image-info.amd64.nix;
-            ${system.aarch64-linux}.pihole = import ./pihole-image-info.arm64.nix;
-          };
+        imageInfo = {
+          ${system.x86_64-linux}.pihole = import ./pihole-image-info.amd64.nix;
+          ${system.aarch64-linux}.pihole = import ./pihole-image-info.arm64.nix;
+        };
 
-          piholeImage = pkgs.dockerTools.pullImage imageInfo.${curSystem}.pihole;
-        in {
-          packages = {
-            inherit piholeImage;
-            default = piholeImage;
-          };
+        piholeImage = pkgs.dockerTools.pullImage imageInfo.${curSystem}.pihole;
+      in
+      {
+        packages = {
+          inherit piholeImage;
+          default = piholeImage;
+        };
 
-          devShells.default = let
+        devShells.default =
+          let
             imageName = "pihole/pihole";
             updatePiholeImageInfoScript = pkgs.writeShellScriptBin "update-pihole-image-info" ''
               while [[ $# -gt 0 ]]; do
@@ -63,17 +67,17 @@
               echo "$IMAGE_INFO" >"pihole-image-info.$ARCH.nix"
             '';
           in
-            pkgs.mkShell {
-              packages = with pkgs; [
-                dig
-                skopeo
-                jq
-                nix-prefetch-docker
-                updatePiholeImageInfoScript
-              ];
-            };
-        }
-      ))
+          pkgs.mkShell {
+            packages = with pkgs; [
+              dig
+              skopeo
+              jq
+              nix-prefetch-docker
+              updatePiholeImageInfoScript
+            ];
+          };
+      }
+    ))
     // {
       # System-agnostic nixosModule
       nixosModules.default = import ./modules/pihole-container.factory.nix {

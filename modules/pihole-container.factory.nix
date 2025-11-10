@@ -1,25 +1,25 @@
-{
-  piholeFlake,
-}: {
-  config,
-  pkgs,
-  lib,
-  ...
-}:
+{ piholeFlake
+,
+}: { config
+   , pkgs
+   , lib
+   , ...
+   }:
 with lib;
 with builtins; let
-  inherit (import ../lib/util.nix {inherit lib;}) extractContainerEnvVars extractContainerFTLEnvVars;
+  inherit (import ../lib/util.nix { inherit lib; }) extractContainerEnvVars extractContainerFTLEnvVars;
 
-  mkContainerEnvOption = {envVar, ...} @ optionAttrs:
-    (mkOption (removeAttrs optionAttrs ["envVar"]))
-    // {inherit envVar;};
+  mkContainerEnvOption = { envVar, ... } @ optionAttrs:
+    (mkOption (removeAttrs optionAttrs [ "envVar" ]))
+    // { inherit envVar; };
 
   cfg = config.services.pihole;
   hostUserCfg = config.users.users.${cfg.hostConfig.user};
   tmpDirIsResetAtBoot = config.boot.tmp.cleanOnBoot || config.boot.tmpOnTmpfs;
   systemTimeZone = config.time.timeZone;
   defaultPiholeVolumesDir = "${config.users.users.${cfg.hostConfig.user}.home}/pihole-volumes";
-in rec {
+in
+rec {
   options = {
     services.pihole = {
       enable = mkEnableOption "PiHole as a rootless podman container";
@@ -34,7 +34,7 @@ in rec {
         };
 
         enableLingeringForUser = mkOption {
-          type = with types; oneOf [bool (enum ["suppressWarning"])];
+          type = with types; oneOf [ bool (enum [ "suppressWarning" ]) ];
           description = ''
             If true lingering (see `loginctl enable-linger`) is enabled for the host user running pihole.
             This is necessary as otherwise starting the pihole container will fail if there is no active session for the host user.
@@ -163,14 +163,14 @@ in rec {
           };
 
           layout = mkContainerEnvOption {
-            type = types.enum ["boxed" "traditional"];
+            type = types.enum [ "boxed" "traditional" ];
             description = "Use boxed layout (helpful when working on large screens)";
             default = "boxed";
             envVar = "WEBUIBOXEDLAYOUT";
           };
 
           theme = mkContainerEnvOption {
-            type = types.enum ["default-dark" "default-darker" "default-light" "default-auto" "lcars"];
+            type = types.enum [ "default-dark" "default-darker" "default-light" "default-auto" "lcars" ];
             description = "User interface theme to use.";
             default = "default-light";
             envVar = "WEBTHEME";
@@ -252,8 +252,8 @@ in rec {
             You can find the different options in the pihole docs: https://docs.pi-hole.net/ftldns/configfile
             The names should be exactly like in the pihole docs.
           '';
-          example = {LOCAL_IPV4 = "192.168.0.100";};
-          default = {};
+          example = { LOCAL_IPV4 = "192.168.0.100"; };
+          default = { };
         };
 
         dhcp = {
@@ -328,7 +328,7 @@ in rec {
         };
 
         temperatureUnit = mkContainerEnvOption {
-          type = types.enum ["c" "k" "f"];
+          type = types.enum [ "c" "k" "f" ];
           description = "Set preferred temperature unit to c: Celsius, k: Kelvin, or f Fahrenheit units.";
           default = "c";
           envVar = "TEMPERATUREUNIT";
@@ -348,7 +348,7 @@ in rec {
     ];
 
     warnings =
-      (optional (cfg.hostConfig.enableLingeringForUser == false) ''
+      (optional (!cfg.hostConfig.enableLingeringForUser) ''
         If lingering is not enabled for the host user which is running the pihole container then he service might be stopped when no user session is active.
 
         Set `services.pihole.hostConfig.enableLingeringForUser` to `true` to manage systemd's linger setting through the `linger-flake` dependency.
@@ -364,79 +364,81 @@ in rec {
         Otherwise you can also set `services.pihole.hostConfig.suppressTmpDirWarning` to `true` to disable the warning.
       '');
 
-    users.users.${cfg.hostConfig.user}.linger = mkIf (cfg.hostConfig.enableLingeringForUser == true) true;
+    users.users.${cfg.hostConfig.user}.linger = mkIf cfg.hostConfig.enableLingeringForUser true;
 
     systemd.services."pihole-rootless-container" = {
-      wantedBy = ["multi-user.target"];
-      after = ["network-online.target"];
-      requires = ["network-online.target"];
+      wantedBy = [ "multi-user.target" ];
+      after = [ "network-online.target" ];
+      requires = [ "network-online.target" ];
 
       # required to make `newuidmap` available to the systemd service (see https://github.com/NixOS/nixpkgs/issues/138423)
-      path = ["/run/wrappers" "/run/current-system/sw/bin"];
+      path = [ "/run/wrappers" "/run/current-system/sw/bin" ];
 
-      serviceConfig = let
-        containerEnvVars = extractContainerEnvVars options.services.pihole cfg;
-        containerFTLEnvVars = extractContainerFTLEnvVars cfg;
+      serviceConfig =
+        let
+          containerEnvVars = extractContainerEnvVars options.services.pihole cfg;
+          containerFTLEnvVars = extractContainerFTLEnvVars cfg;
 
-        myScript = pkgs.writeShellScript "run-pihole.sh" ''
-          WEBPASSWORD=$(cat ${cfg.piholeConfig.web.passwordFile})
-          ${pkgs.podman}/bin/podman run \
-                      --rm \
-                      --rmi \
-                      --name="${cfg.hostConfig.containerName}" \
-                      ${
-            if cfg.hostConfig.persistVolumes
-            then ''
-              -v ${cfg.hostConfig.volumesPath}/etc-pihole:/etc/pihole \
-              -v ${cfg.hostConfig.volumesPath}/etc-dnsmasq.d:/etc/dnsmasq.d \
-            ''
-            else ""
-          } \
-                      ${
-            if !(isNull cfg.hostConfig.dnsPort)
-            then ''
-              -p ${toString cfg.hostConfig.dnsPort}:53/tcp \
-              -p ${toString cfg.hostConfig.dnsPort}:53/udp \
-            ''
-            else ""
-          } \
-                      ${
-            if !(isNull cfg.hostConfig.dhcpPort)
-            then ''
-              -p ${toString cfg.hostConfig.dhcpPort}:67/udp \
-            ''
-            else ""
-          } \
-                      ${
-            if !(isNull cfg.hostConfig.webPort)
-            then ''
-              -p ${toString cfg.hostConfig.webPort}:80/tcp \
-            ''
-            else ""
-          } \
-                      ${
-            if cfg.piholeConfig.web.passwordFile != ""
-            then ''
-              -e WEBPASSWORD=$WEBPASSWORD \
-            ''
-            else ""
-          } \
-                      ${
-            lib.strings.concatStringsSep " \\\n"
-            (map (envVar: "  -e '${envVar.name}=${toString envVar.value}'") (containerEnvVars ++ containerFTLEnvVars))
-          } \
-                      docker-archive:${piholeFlake.packages.${pkgs.system}.piholeImage}
-        '';
-      in {
-        ExecStartPre = mkIf cfg.hostConfig.persistVolumes [
-          "${pkgs.coreutils}/bin/mkdir -p ${cfg.hostConfig.volumesPath}/etc-pihole"
-          "${pkgs.coreutils}/bin/mkdir -p ${cfg.hostConfig.volumesPath}/etc-dnsmasq.d"
-          ''${pkgs.podman}/bin/podman rm --ignore "${cfg.hostConfig.containerName}"''
-        ];
+          myScript = pkgs.writeShellScript "run-pihole.sh" ''
+            WEBPASSWORD=$(cat ${cfg.piholeConfig.web.passwordFile})
+            ${pkgs.podman}/bin/podman run \
+                        --rm \
+                        --rmi \
+                        --name="${cfg.hostConfig.containerName}" \
+                        ${
+              if cfg.hostConfig.persistVolumes
+              then ''
+                -v ${cfg.hostConfig.volumesPath}/etc-pihole:/etc/pihole \
+                -v ${cfg.hostConfig.volumesPath}/etc-dnsmasq.d:/etc/dnsmasq.d \
+              ''
+              else ""
+            } \
+                        ${
+              if cfg.hostConfig.dnsPort != null
+              then ''
+                -p ${toString cfg.hostConfig.dnsPort}:53/tcp \
+                -p ${toString cfg.hostConfig.dnsPort}:53/udp \
+              ''
+              else ""
+            } \
+                        ${
+              if cfg.hostConfig.dhcpPort != null
+              then ''
+                -p ${toString cfg.hostConfig.dhcpPort}:67/udp \
+              ''
+              else ""
+            } \
+                        ${
+              if cfg.hostConfig.webPort != null
+              then ''
+                -p ${toString cfg.hostConfig.webPort}:80/tcp \
+              ''
+              else ""
+            } \
+                        ${
+              if cfg.piholeConfig.web.passwordFile != ""
+              then ''
+                -e WEBPASSWORD=$WEBPASSWORD \
+              ''
+              else ""
+            } \
+                        ${
+              lib.strings.concatStringsSep " \\\n"
+              (map (envVar: "  -e '${envVar.name}=${toString envVar.value}'") (containerEnvVars ++ containerFTLEnvVars))
+            } \
+                        docker-archive:${piholeFlake.packages.${pkgs.system}.piholeImage}
+          '';
+        in
+        {
+          ExecStartPre = mkIf cfg.hostConfig.persistVolumes [
+            "${pkgs.coreutils}/bin/mkdir -p ${cfg.hostConfig.volumesPath}/etc-pihole"
+            "${pkgs.coreutils}/bin/mkdir -p ${cfg.hostConfig.volumesPath}/etc-dnsmasq.d"
+            ''${pkgs.podman}/bin/podman rm --ignore "${cfg.hostConfig.containerName}"''
+          ];
 
-        ExecStart = "${myScript}";
-        User = "${cfg.hostConfig.user}";
-      };
+          ExecStart = "${myScript}";
+          User = "${cfg.hostConfig.user}";
+        };
 
       postStop = ''
         while ${pkgs.podman}/bin/podman container exists "${cfg.hostConfig.containerName}"; do

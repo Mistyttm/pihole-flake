@@ -20,31 +20,32 @@
     };
   };
 
-  outputs = {
-    self,
-    nixpkgs,
-    pihole,
-    ...
-  }: let
-    system = "x86_64-linux";
-    # use x86_64 packages from nixpkgs
-    pkgs = nixpkgs.legacyPackages.${system};
-  in {
-    nixosConfigurations."nixos-example-system" = nixpkgs.lib.nixosSystem {
-      # nixosSystem needs to know the system architecture
-      inherit system;
-      modules = [
-        # a small module for enabling nix flakes
-        {
-          nix = {
-            package = pkgs.nix;
-            extraOptions = "experimental-features = nix-command flakes";
+  outputs =
+    { nixpkgs
+    , pihole
+    , ...
+    }:
+    let
+      system = "x86_64-linux";
+      # use x86_64 packages from nixpkgs
+      pkgs = nixpkgs.legacyPackages.${system};
+    in
+    {
+      nixosConfigurations."nixos-example-system" = nixpkgs.lib.nixosSystem {
+        # nixosSystem needs to know the system architecture
+        inherit system;
+        modules = [
+          # a small module for enabling nix flakes
+          {
+            nix = {
+              package = pkgs.nix;
+              extraOptions = "experimental-features = nix-command flakes";
 
-            # Opinionated: use system flake's (locked) `nixpkgs` as default `nixpkgs` for flake commands
-            # see https://dataswamp.org/~solene/2022-07-20-nixos-flakes-command-sync-with-system.html
-            registry.nixpkgs.flake = nixpkgs;
-          };
-        }
+              # Opinionated: use system flake's (locked) `nixpkgs` as default `nixpkgs` for flake commands
+              # see https://dataswamp.org/~solene/2022-07-20-nixos-flakes-command-sync-with-system.html
+              registry.nixpkgs.flake = nixpkgs;
+            };
+          }
           # some existing system & hardware configuration modules; it is assumed that a user named `pihole` is defined here
           # and that the user has sub-uids/gids configured (e.g. via the `users.users.pihole.subUidRanges/subGidRanges` options)
           ./configuration.nix
@@ -87,11 +88,11 @@
             # we need to open the ports in the firewall to make the service accessible beyond `localhost`
             # assuming that Pi-hole is exposed on the host interface `eth0`
             networking.firewall.interfaces.eth0 = {
-              allowedTCPPorts = [5335 8080];
-              allowedUDPPorts = [5335];
+              allowedTCPPorts = [ 5335 8080 ];
+              allowedUDPPorts = [ 5335 ];
             };
           }
-      ];
+        ];
+      };
     };
-  };
 }
