@@ -52,22 +52,22 @@ in
         collectAttrFragments
           (value: isAttrs value && value ? "envVar")
           (value: isAttrs value && value._type or "" == "option")
-          _opt.piholeConfig;
+          (removeAttrs _opt [ "enable" "container" ]);
     in
     filter
       (envVar: envVar.value != null)
       (
         map
           (fragment: {
-            name = getAttr "envVar" (accessValueOfFragment _opt.piholeConfig fragment);
-            value = toEnvValue (accessValueOfFragment _cfg.piholeConfig fragment);
+            name = getAttr "envVar" (accessValueOfFragment (removeAttrs _opt [ "enable" "container" ]) fragment);
+            value = toEnvValue (accessValueOfFragment (removeAttrs _cfg [ "enable" "container" ]) fragment);
           })
           _envVarFragments
       );
 
   extractContainerFTLEnvVars = piholeOptionDefinitions:
     let
-      _ftl = piholeOptionDefinitions.piholeConfig.ftl;
+      _ftl = piholeOptionDefinitions.ftl;
     in
     map
       (name: {
