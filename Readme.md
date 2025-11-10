@@ -44,7 +44,7 @@ The module options are separate into two parts:
 
 All host-specific options are contained in `services.pihole.hostConfig`.
 Among others the `hostConfig` contains the options for exposing the ports of Pi-hole's DNS, DHCP, and web UI components.
-Remember if that if you run the service in a rootless container binding to priviledged ports is by default not possible.
+Remember if that if you run the service in a rootless container binding to privileged ports is by default not possible.
 
 To handle this limitation you can either:
 
