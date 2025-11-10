@@ -1,4 +1,4 @@
-{ config, lib, ... }:
+{ lib, ... }:
 let
   mkContainerEnvOption =
     { envVar, ... }@optionAttrs:
