@@ -96,6 +96,32 @@ The `update-pihole-image-info` command determines the newest image digest availa
 
 [^1]: The image in the upstream repository is not updated regularly. Please use & update your local clone of the flake, instead of using the vanilla upstream version.
 
+## Testing
+
+The flake includes comprehensive NixOS integration tests that verify the module works correctly.
+
+### Run all tests:
+```bash
+nix flake check
+```
+
+### Run specific tests:
+```bash
+nix build .#checks.x86_64-linux.basic
+nix build .#checks.x86_64-linux.containerOptions
+nix build .#checks.x86_64-linux.dhcpConfiguration
+nix build .#checks.x86_64-linux.flattenedStructure
+```
+
+### Available tests:
+- **basic** - Core functionality (user creation, service configuration, lingering)
+- **containerOptions** - Container-specific settings (ports, volumes, custom names)
+- **dhcpConfiguration** - DHCP server and reverse DNS configuration
+- **flattenedStructure** - Verifies new flattened config structure works
+- **assertions** - Tests module assertions and error handling
+
+See [`tests/README.md`](./tests/README.md) for detailed test documentation.
+
 ## Development
 
 ### CI/CD Pipeline
