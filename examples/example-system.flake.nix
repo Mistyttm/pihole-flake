@@ -1,6 +1,6 @@
 ## This is an example flake-based NixOS configuration to show the use of the pihole-flake.
 ## The configuration is not complete and it is assumed that a `./configuration.nix` and `./hardware.nix` exists.
-## The example will start Pi-hole in an unprivileged container and expose the DNS & web services on unpriviledged ports.
+## The example will start Pi-hole in an unprivileged container and expose the DNS & web services on unprivileged ports.
 {
   inputs = {
     nixpkgs.url = "nixpkgs/nixos-unstable";
@@ -68,7 +68,7 @@
                 # check the option descriptions for more information
                 persistVolumes = true;
 
-                # expose DNS & the web interface on unpriviledged ports on all IP addresses of the host
+                # expose DNS & the web interface on unprivileged ports on all IP addresses of the host
                 # check the option descriptions for more information
                 dnsPort = 5335;
                 webPort = 8080;
