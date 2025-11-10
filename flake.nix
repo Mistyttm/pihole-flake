@@ -32,6 +32,11 @@
           default = piholeImage;
         };
 
+        checks = import ./tests {
+          inherit pkgs;
+          piholeFlake = self;
+        };
+
         devShells.default =
           let
             imageName = "pihole/pihole";
