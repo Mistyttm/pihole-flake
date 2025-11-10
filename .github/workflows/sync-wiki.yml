@@ -1,0 +1,74 @@
+name: Sync Documentation to Wiki
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - '.github/workflows/sync-wiki.yml'
+  workflow_dispatch:
+
+jobs:
+  sync-wiki:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Checkout wiki
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}.wiki
+          path: wiki
+
+      - name: Sync documentation to wiki
+        run: |
+          # Copy documentation files to wiki
+          cp docs/Home.md wiki/Home.md
+          cp docs/Installation.md wiki/Installation.md
+          cp docs/Examples.md wiki/Examples.md
+          cp docs/Troubleshooting.md wiki/Troubleshooting.md
+          cp docs/Migration-Guide.md wiki/Migration-Guide.md
+          cp docs/CI-CD.md wiki/CI-CD.md
+          
+          # Create _Sidebar.md for wiki navigation
+          cat > wiki/_Sidebar.md << 'EOF'
+          ## pihole-flake Documentation
+
+          ### Getting Started
+          - [Home](Home)
+          - [Installation](Installation)
+          - [Examples](Examples)
+
+          ### Reference
+          - [Troubleshooting](Troubleshooting)
+          - [Migration Guide](Migration-Guide)
+
+          ### Development
+          - [CI/CD](CI-CD)
+          EOF
+          
+          # Create _Footer.md
+          cat > wiki/_Footer.md << 'EOF'
+          ---
+          **pihole-flake** | [GitHub](https://github.com/${{ github.repository }}) | [Issues](https://github.com/${{ github.repository }}/issues)
+          EOF
+
+      - name: Commit and push changes to wiki
+        working-directory: wiki
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Sync documentation from docs/ (${GITHUB_SHA::7})"
+            git push
+          fi
