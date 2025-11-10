@@ -1,0 +1,134 @@
+name: Update Pi-hole Image
+
+on:
+  schedule:
+    # Run weekly on Monday at 00:00 UTC
+    - cron: '0 0 * * 1'
+  workflow_dispatch:
+
+jobs:
+  check-updates:
+    name: Check for Pi-hole Updates
+    runs-on: ubuntu-latest
+    outputs:
+      has-update: ${{ steps.check.outputs.has-update }}
+      new-version: ${{ steps.check.outputs.new-version }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v9
+
+      - name: Setup Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@v3
+
+      - name: Install dependencies
+        run: nix-shell --run "echo 'Dependencies installed'"
+
+      - name: Check current version
+        id: current
+        run: |
+          CURRENT_VERSION=$(grep 'finalImageTag' pihole-image-info.amd64.nix | cut -d'"' -f2)
+          echo "current-version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          echo "Current Pi-hole version: $CURRENT_VERSION"
+
+      - name: Check latest version
+        id: latest
+        run: |
+          LATEST_VERSION=$(nix-shell --run "skopeo inspect docker://pihole/pihole:latest | jq -r '.Labels.\"org.opencontainers.image.version\"'")
+          echo "latest-version=$LATEST_VERSION" >> $GITHUB_OUTPUT
+          echo "Latest Pi-hole version: $LATEST_VERSION"
+
+      - name: Compare versions
+        id: check
+        run: |
+          CURRENT="${{ steps.current.outputs.current-version }}"
+          LATEST="${{ steps.latest.outputs.latest-version }}"
+          
+          if [ "$CURRENT" != "$LATEST" ]; then
+            echo "has-update=true" >> $GITHUB_OUTPUT
+            echo "new-version=$LATEST" >> $GITHUB_OUTPUT
+            echo "✅ New version available: $LATEST (current: $CURRENT)"
+          else
+            echo "has-update=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ Already on latest version: $CURRENT"
+          fi
+
+  update-images:
+    name: Update Pi-hole Images
+    runs-on: ubuntu-latest
+    needs: check-updates
+    if: needs.check-updates.outputs.has-update == 'true'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v9
+
+      - name: Setup Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@v3
+
+      - name: Setup QEMU for cross-compilation
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qemu-user-static binfmt-support
+
+      - name: Configure Nix for multi-arch builds
+        run: |
+          echo "extra-platforms = aarch64-linux" | sudo tee -a /etc/nix/nix.conf
+          sudo systemctl restart nix-daemon
+
+      - name: Update amd64 image info
+        run: |
+          nix develop --command update-pihole-image-info --arch amd64
+
+      - name: Update arm64 image info
+        run: |
+          nix develop --command update-pihole-image-info --arch arm64
+
+      - name: Verify updates
+        run: |
+          echo "=== AMD64 Image Info ==="
+          cat pihole-image-info.amd64.nix
+          echo ""
+          echo "=== ARM64 Image Info ==="
+          cat pihole-image-info.arm64.nix
+
+      - name: Test build with new images
+        run: |
+          nix build .#packages.x86_64-linux.piholeImage --print-build-logs
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: update Pi-hole to version ${{ needs.check-updates.outputs.new-version }}"
+          title: "Update Pi-hole to version ${{ needs.check-updates.outputs.new-version }}"
+          body: |
+            ## 🚀 Automated Pi-hole Update
+            
+            This PR updates the Pi-hole container image to version **${{ needs.check-updates.outputs.new-version }}**.
+            
+            ### Changes
+            - Updated `pihole-image-info.amd64.nix` with new image digest and hash
+            - Updated `pihole-image-info.arm64.nix` with new image digest and hash
+            
+            ### Testing
+            - ✅ Image info files updated successfully
+            - ✅ x86_64 build test passed
+            
+            ### Review Checklist
+            - [ ] Verify image versions are correct
+            - [ ] Check that CI passes
+            - [ ] Test on both architectures if possible
+            
+            ---
+            *This PR was automatically created by the Update Pi-hole Image workflow.*
+          branch: automated/update-pihole-${{ needs.check-updates.outputs.new-version }}
+          delete-branch: true
+          labels: |
+            automated
+            dependencies
+            pihole-update
