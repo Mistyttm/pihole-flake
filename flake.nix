@@ -12,7 +12,7 @@
     nixpkgs,
     flake-utils,
   }:
-    with flake-utils.lib;
+    (with flake-utils.lib;
       eachSystem (with system; [x86_64-linux aarch64-linux]) (
         curSystem: let
           pkgs = nixpkgs.legacyPackages.${curSystem};
@@ -27,10 +27,6 @@
           packages = {
             inherit piholeImage;
             default = piholeImage;
-          };
-
-          nixosModules.default = (import ./modules/pihole-container.factory.nix) {
-            piholeFlake = self;
           };
 
           devShells.default = let
@@ -77,5 +73,11 @@
               ];
             };
         }
-      );
+      ))
+    // {
+      # System-agnostic nixosModule
+      nixosModules.default = import ./modules/pihole-container.factory.nix {
+        piholeFlake = self;
+      };
+    };
 }
