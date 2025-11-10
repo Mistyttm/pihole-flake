@@ -50,7 +50,7 @@
           ./configuration.nix
           ./hardware.nix
           # make the module declared by the pihole flake available to our config
-          pihole.nixosModules.${system}.default
+          pihole.nixosModules.default
           # in another module we can now configure the pihole service (could also be part of ./configuration.nix)
           {
             # required for stable restarts of the Pi-hole container (try to remove it to see the warning from the pihole-flake)
