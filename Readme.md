@@ -17,6 +17,7 @@ Full descriptions of the configuration options can be found the in the module.
 Example configurations can be found in the `examples` folder.
 
 The module options are separate into two parts:
+
 * **Host-specific options** which define how the Pi-hole container should be run on the host
 * **Pi-hole-specific options** which configure the Pi-hole service in the container
 
@@ -27,6 +28,7 @@ Among others the `hostConfig` contains the options for exposing the ports of Pi-
 Remember if that if you run the service in a rootless container binding to priviledged ports is by default not possible.
 
 To handle this limitation you can either:
+
 * *Access the components on non-privileged ports:* This should be easily possible for the web & DNS components---if your DHCP server supports DNS servers with non-standard ports or if you configure your DNS resolvers to use a non-default port by other means.
   If you use Pi-hole's DHCP server then lookup your DHCP client's documentation on how to send DHCP requests to non-standard ports.
 * *Use port-fowarding from a privileged to an unprivileged port*
@@ -40,8 +42,9 @@ This user needs a [subuid](https://nixos.org/manual/nixos/stable/options.html#op
 If you want to persist your Pi-hole configuration (the changes you made via the UI) between container restarts take a look at `services.pihole.hostConfig.persistVolumes` and `services.pihole.hostConfig.volumesPath`.
 
 Running rootless podman containers can be unstable and the systemd service can fail if certain precautions are not taken:
+
 * The user running the Pi-hole container should be allowed to linger after all her sessions are closed.
-  See `services.pihole.hostConfig.enableLingeringForUser` for details.
+  See `services.pihole.hostConfig.enableLingeringForUser` for details. This uses the built-in NixOS `users.users.<name>.linger` option.
 * The temporary directory used by rootless podman should be cleaned of any remains on system start.
   See `services.pihole.hostConfig.suppressTmpDirWarning` for details.
 
@@ -59,6 +62,7 @@ Therefore the used version of the image must be pinned before building the flake
 
 The image information is stored in `./pihole-image-info.ARCH.nix` where `ARCH` is either `amd64` or `arm64`.
 To update both architectures to the newest Pi-hole image version execute:
+
 ```bash
 nix develop
 update-pihole-image-info --arch amd64
