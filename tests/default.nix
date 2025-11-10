@@ -151,7 +151,7 @@ in
 
         boot.tmp.cleanOnBoot = true;
         networking.firewall.enable = false;
-        
+
         virtualisation = {
           podman.enable = true;
           diskSize = 4096;
@@ -236,7 +236,7 @@ in
 
         boot.tmp.cleanOnBoot = true;
         networking.firewall.enable = false;
-        
+
         virtualisation = {
           podman.enable = true;
           diskSize = 4096;
@@ -308,7 +308,7 @@ in
 
         boot.tmp.cleanOnBoot = true;
         networking.firewall.enable = false;
-        
+
         virtualisation = {
           podman.enable = true;
           diskSize = 4096;
