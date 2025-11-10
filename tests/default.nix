@@ -248,12 +248,24 @@ in
         machine.wait_for_unit("multi-user.target")
       
         # Verify service is defined
-        machine.succeed("systemctl cat pihole-rootless-container")
-      
-        # Check that DHCP port is configured in the service (host port 6767 maps to container port 67)
         service_config = machine.succeed("systemctl cat pihole-rootless-container")
+        print("Service configuration:")
+        print(service_config)
+      
+        # Extract the ExecStart script path from the service file
+        import re
+        match = re.search(r'ExecStart=(/\S+)', service_config)
+        assert match, "ExecStart not found in service configuration"
+        script_path = match.group(1)
+        print(f"ExecStart script: {script_path}")
+      
+        # Read and check the script content for DHCP port configuration
+        script_content = machine.succeed(f"cat {script_path}")
+        print("Script content:")
+        print(script_content)
+        
         # The port format is host:container, so we look for the DHCP container port 67
-        assert "-p" in service_config and "67/udp" in service_config, "DHCP port not configured"
+        assert "-p" in script_content and "67/udp" in script_content, "DHCP port not configured in script"
       
         print("✓ DHCP configuration test passed!")
       '';

@@ -1,13 +1,17 @@
 { piholeFlake
 ,
-}: { config
-   , pkgs
-   , lib
-   , options
-   , ...
-   }:
+}:
+{ config
+, pkgs
+, lib
+, options
+, ...
+}:
 let
-  inherit (import ../lib/util.nix { inherit lib; }) extractContainerEnvVars extractContainerFTLEnvVars;
+  inherit (import ../lib/util.nix { inherit lib; })
+    extractContainerEnvVars
+    extractContainerFTLEnvVars
+    ;
 
   cfg = config.services.pihole;
   hostUserCfg = config.users.users.${cfg.container.user};
@@ -26,7 +30,8 @@ in
   config = lib.mkIf cfg.enable {
     assertions = [
       {
-        assertion = builtins.length hostUserCfg.subUidRanges > 0 && builtins.length hostUserCfg.subGidRanges > 0;
+        assertion =
+          builtins.length hostUserCfg.subUidRanges > 0 && builtins.length hostUserCfg.subGidRanges > 0;
         message = ''
           The host user most have configured subUidRanges & subGidRanges as pihole is running in a rootless podman container.
         '';
@@ -52,13 +57,23 @@ in
 
     users.users.${cfg.container.user}.linger = lib.mkIf cfg.container.enableLingering true;
 
+    # Create volumes directory with proper ownership using tmpfiles.d
+    systemd.tmpfiles.rules = lib.mkIf cfg.container.persistVolumes [
+      "d ${cfg.container.volumesPath} 0755 ${cfg.container.user} ${hostUserCfg.group} -"
+      "d ${cfg.container.volumesPath}/etc-pihole 0755 ${cfg.container.user} ${hostUserCfg.group} -"
+      "d ${cfg.container.volumesPath}/etc-dnsmasq.d 0755 ${cfg.container.user} ${hostUserCfg.group} -"
+    ];
+
     systemd.services."pihole-rootless-container" = {
       wantedBy = [ "multi-user.target" ];
       after = [ "network-online.target" ];
       requires = [ "network-online.target" ];
 
       # required to make `newuidmap` available to the systemd service (see https://github.com/NixOS/nixpkgs/issues/138423)
-      path = [ "/run/wrappers" "/run/current-system/sw/bin" ];
+      path = [
+        "/run/wrappers"
+        "/run/current-system/sw/bin"
+      ];
 
       serviceConfig =
         let
@@ -72,53 +87,59 @@ in
                         --rmi \
                         --name="${cfg.container.name}" \
                         ${
-              if cfg.container.persistVolumes
-              then ''
-                -v ${cfg.container.volumesPath}/etc-pihole:/etc/pihole \
-                -v ${cfg.container.volumesPath}/etc-dnsmasq.d:/etc/dnsmasq.d \
-              ''
-              else ""
-            } \
+                          if cfg.container.persistVolumes then
+                            ''
+                              -v ${cfg.container.volumesPath}/etc-pihole:/etc/pihole \
+                              -v ${cfg.container.volumesPath}/etc-dnsmasq.d:/etc/dnsmasq.d \
+                            ''
+                          else
+                            ""
+                        } \
                         ${
-              if cfg.container.dnsPort != null
-              then ''
-                -p ${toString cfg.container.dnsPort}:53/tcp \
-                -p ${toString cfg.container.dnsPort}:53/udp \
-              ''
-              else ""
-            } \
+                          if cfg.container.dnsPort != null then
+                            ''
+                              -p ${toString cfg.container.dnsPort}:53/tcp \
+                              -p ${toString cfg.container.dnsPort}:53/udp \
+                            ''
+                          else
+                            ""
+                        } \
                         ${
-              if cfg.container.dhcpPort != null
-              then ''
-                -p ${toString cfg.container.dhcpPort}:67/udp \
-              ''
-              else ""
-            } \
+                          if cfg.container.dhcpPort != null then
+                            ''
+                              -p ${toString cfg.container.dhcpPort}:67/udp \
+                            ''
+                          else
+                            ""
+                        } \
                         ${
-              if cfg.container.webPort != null
-              then ''
-                -p ${toString cfg.container.webPort}:80/tcp \
-              ''
-              else ""
-            } \
+                          if cfg.container.webPort != null then
+                            ''
+                              -p ${toString cfg.container.webPort}:80/tcp \
+                            ''
+                          else
+                            ""
+                        } \
                         ${
-              if cfg.web.passwordFile != ""
-              then ''
-                -e WEBPASSWORD=$WEBPASSWORD \
-              ''
-              else ""
-            } \
+                          if cfg.web.passwordFile != "" then
+                            ''
+                              -e WEBPASSWORD=$WEBPASSWORD \
+                            ''
+                          else
+                            ""
+                        } \
                         ${
-              lib.strings.concatStringsSep " \\\n"
-              (map (envVar: "  -e '${envVar.name}=${toString envVar.value}'") (containerEnvVars ++ containerFTLEnvVars))
-            } \
+                          lib.strings.concatStringsSep " \\\n" (
+                            map (envVar: "  -e '${envVar.name}=${toString envVar.value}'") (
+                              containerEnvVars ++ containerFTLEnvVars
+                            )
+                          )
+                        } \
                         docker-archive:${piholeFlake.packages.${pkgs.system}.piholeImage}
           '';
         in
         {
           ExecStartPre = lib.mkIf cfg.container.persistVolumes [
-            "${pkgs.coreutils}/bin/mkdir -p ${cfg.container.volumesPath}/etc-pihole"
-            "${pkgs.coreutils}/bin/mkdir -p ${cfg.container.volumesPath}/etc-dnsmasq.d"
             ''${pkgs.podman}/bin/podman rm --ignore "${cfg.container.name}"''
           ];
 
