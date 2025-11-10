@@ -34,19 +34,21 @@ To use this flake in your NixOS configuration, add it as an input and import the
 
 All configuration options can be found under the key `service.pihole`.
 The Pi-hole service can be enabled by setting `services.pihole.enable = true`.
-Full descriptions of the configuration options can be found the in the module.
+Full descriptions of the configuration options can be found in the module.
 Example configurations can be found in the `examples` folder.
 
-The module options are separate into two parts:
+> **Note:** The module structure has been updated. See [MIGRATION.md](./MIGRATION.md) for migration guide from older versions.
 
-* **Host-specific options** which define how the Pi-hole container should be run on the host
-* **Pi-hole-specific options** which configure the Pi-hole service in the container
+The module options are separated into two parts:
 
-### Host-specific options
+* **Container options** (`services.pihole.container`) which define how the Pi-hole container should be run on the host
+* **Pi-hole application options** (directly under `services.pihole`) which configure the Pi-hole service in the container
 
-All host-specific options are contained in `services.pihole.hostConfig`.
-Among others the `hostConfig` contains the options for exposing the ports of Pi-hole's DNS, DHCP, and web UI components.
-Remember if that if you run the service in a rootless container binding to privileged ports is by default not possible.
+### Container Options
+
+All container runtime options are contained in `services.pihole.container`.
+Among others, the `container` section contains the options for exposing the ports of Pi-hole's DNS, DHCP, and web UI components.
+Remember that if you run the service in a rootless container, binding to privileged ports is by default not possible.
 
 To handle this limitation you can either:
 
@@ -57,23 +59,23 @@ To handle this limitation you can either:
 
 Also do not forget to open the exposed ports in NixOS' firewall otherwise you won't be able to access the services.
 
-As the Pi-hole container supports to be run rootless, you need to configure which user should run the Pi-hole container via `services.pihole.hostConfig.user`.
-This user needs a [subuid](https://nixos.org/manual/nixos/stable/options.html#opt-users.users._name_.subUidRanges)/[subgid](https://nixos.org/manual/nixos/stable/options.html#opt-users.users._name_.subGidRanges) ranges defined or [automatically configured](https://nixos.org/manual/nixos/stable/options.html#opt-users.users._name_.autoSubUidGidRange) s.t. she can run rootless podman containers.
+As the Pi-hole container supports being run rootless, you need to configure which user should run the Pi-hole container via `services.pihole.container.user`.
+This user needs a [subuid](https://nixos.org/manual/nixos/stable/options.html#opt-users.users._name_.subUidRanges)/[subgid](https://nixos.org/manual/nixos/stable/options.html#opt-users.users._name_.subGidRanges) ranges defined or [automatically configured](https://nixos.org/manual/nixos/stable/options.html#opt-users.users._name_.autoSubUidGidRange) so they can run rootless podman containers.
 
-If you want to persist your Pi-hole configuration (the changes you made via the UI) between container restarts take a look at `services.pihole.hostConfig.persistVolumes` and `services.pihole.hostConfig.volumesPath`.
+If you want to persist your Pi-hole configuration (the changes you made via the UI) between container restarts, take a look at `services.pihole.container.persistVolumes` and `services.pihole.container.volumesPath`.
 
 Running rootless podman containers can be unstable and the systemd service can fail if certain precautions are not taken:
 
-* The user running the Pi-hole container should be allowed to linger after all her sessions are closed.
-  See `services.pihole.hostConfig.enableLingeringForUser` for details. This uses the built-in NixOS `users.users.<name>.linger` option.
+* The user running the Pi-hole container should be allowed to linger after all their sessions are closed.
+  See `services.pihole.container.enableLingering` for details. This uses the built-in NixOS `users.users.<name>.linger` option.
 * The temporary directory used by rootless podman should be cleaned of any remains on system start.
-  See `services.pihole.hostConfig.suppressTmpDirWarning` for details.
+  See `services.pihole.container.suppressTmpDirWarning` for details.
 
-### Pi-hole options
+### Pi-hole Application Options
 
-All options for configuring Pi-hole itself can be found under the key `services.pihole.piholeConfig`.
+All options for configuring Pi-hole itself can be found directly under `services.pihole` (e.g., `services.pihole.web`, `services.pihole.dns`, `services.pihole.dhcp`).
 The exposed options are mainly those listed as the environment variables of the [Docker image](https://github.com/pi-hole/docker-pi-hole#environment-variables) or of [FTLDNS](https://docs.pi-hole.net/ftldns/configfile/).
-Though the options have been grouped to provide more structure (see the option declarations in the module for details).
+The options have been grouped logically to provide more structure (see the option declarations in the module for details).
 
 ## Updating[^1] the Pi-hole Image
 
