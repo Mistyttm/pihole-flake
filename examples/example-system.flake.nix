@@ -13,24 +13,16 @@
 
     flake-utils.url = "github:numtide/flake-utils";
 
-    # Required for making sure that Pi-hole continues running if the executing user has no active session.
-    linger = {
-      url = "github:mindsbackyard/linger-flake";
-      inputs.flake-utils.follows = "flake-utils";
-    };
-
     pihole = {
       url = "github:mindsbackyard/pihole-flake";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.flake-utils.follows = "flake-utils";
-      inputs.linger.follows = "linger";
     };
   };
 
   outputs = {
     self,
     nixpkgs,
-    linger,
     pihole,
     ...
   }: let
@@ -43,26 +35,24 @@
       inherit system;
       modules = [
         # a small module for enabling nix flakes
-        {...}:
-          {
-            nix = {
-              packge = pkgs.nixFlakes;
-              extraOptions = "experimental-features = nix-command flake";
+        {
+          nix = {
+            package = pkgs.nix;
+            extraOptions = "experimental-features = nix-command flakes";
 
-              # Opinionated: use system flake's (locked) `nixpkgs` as default `nixpkgs` for flake commands
-              # see https://dataswamp.org/~solene/2022-07-20-nixos-flakes-command-sync-with-system.html
-              registry.nixpkgs.flake = nixpkgs;
-            };
-          }
+            # Opinionated: use system flake's (locked) `nixpkgs` as default `nixpkgs` for flake commands
+            # see https://dataswamp.org/~solene/2022-07-20-nixos-flakes-command-sync-with-system.html
+            registry.nixpkgs.flake = nixpkgs;
+          };
+        }
           # some existing system & hardware configuration modules; it is assumed that a user named `pihole` is defined here
           # and that the user has sub-uids/gids configured (e.g. via the `users.users.pihole.subUidRanges/subGidRanges` options)
           ./configuration.nix
           ./hardware.nix
-          # make the module declared by the linger flake available to our config
-          linger.nixosModules.${system}.default
+          # make the module declared by the pihole flake available to our config
           pihole.nixosModules.${system}.default
-          # in another module we can now configure the lingering behaviour (could also be part of ./configuration.nix)
-          {...}: {
+          # in another module we can now configure the pihole service (could also be part of ./configuration.nix)
+          {
             # required for stable restarts of the Pi-hole container (try to remove it to see the warning from the pihole-flake)
             boot.tmp.cleanOnBoot = true;
 
@@ -81,7 +71,7 @@
                 # expose DNS & the web interface on unpriviledged ports on all IP addresses of the host
                 # check the option descriptions for more information
                 dnsPort = 5335;
-                webProt = 8080;
+                webPort = 8080;
               };
               piholeConfig.ftl = {
                 # assuming that the host has this (fixed) IP and should resolve "pi.hole" to this address
