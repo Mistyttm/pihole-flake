@@ -1,6 +1,5 @@
 { config, lib, ... }:
 let
-  systemTimeZone = config.time.timeZone;
   mkContainerEnvOption =
     { envVar, ... }@optionAttrs:
     (lib.mkOption (removeAttrs optionAttrs [ "envVar" ])) // { inherit envVar; };
@@ -10,8 +9,8 @@ in
     timezone = mkContainerEnvOption {
       type = lib.types.str;
       description = "Timezone for Pi-hole's internal clock and log rotation. Ensures logs rotate at local midnight.";
-      default = systemTimeZone;
-      defaultText = lib.literalExpression "config.time.timeZone";
+      default = "UTC";
+      defaultText = lib.literalExpression ''config.time.timeZone or "UTC"'';
       example = "Europe/Amsterdam";
       envVar = "TZ";
     };
@@ -41,8 +40,9 @@ in
       };
 
       virtualHost = mkContainerEnvOption {
-        type = lib.types.str;
+        type = lib.types.nullOr lib.types.str;
         description = "Virtual hostname for accessing the web interface. Allows admin access via custom hostname in addition to `http://pi.hole/admin/`.";
+        default = null;
         example = "pihole.example.com";
         envVar = "VIRTUAL_HOST";
       };
