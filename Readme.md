@@ -1,5 +1,7 @@
 # Pi-hole Flake
 
+[![CI](https://github.com/Mistyttm/pihole-flake/actions/workflows/ci.yml/badge.svg)](https://github.com/Mistyttm/pihole-flake/actions/workflows/ci.yml)
+
 A NixOS flake providing a [Pi-hole](https://pi-hole.net) container & NixOS module for running it in a (rootless) podman container.
 
 The flake provides a container image for Pi-hole by fetching the `pihole/pihole` image version defined in `pihole-image-base-info.nix`.
@@ -91,3 +93,83 @@ update-pihole-image-info --arch arm64
 The `update-pihole-image-info` command determines the newest image digest available, pre-fetches the images into the nix-store, and updates the respective `./pihole-image-info.ARCH.nix` files.
 
 [^1]: The image in the upstream repository is not updated regularly. Please use & update your local clone of the flake, instead of using the vanilla upstream version.
+
+## Development
+
+### CI/CD Pipeline
+
+This project uses GitHub Actions for continuous integration and automated updates:
+
+- **CI Workflow** (`.github/workflows/ci.yml`):
+  - Runs on every push and pull request
+  - Tests `nix flake check` on all systems
+  - Builds Pi-hole images for both x86_64-linux and aarch64-linux
+  - Validates the NixOS module and example configuration
+  - Performs security scanning and format checking
+
+- **Automated Pi-hole Updates** (`.github/workflows/update-pihole.yml`):
+  - Runs weekly to check for new Pi-hole releases
+  - Automatically updates image info files for both architectures
+  - Creates a pull request when a new version is available
+  - Includes automated testing before PR creation
+
+### Running Tests Locally
+
+```bash
+# Run all checks
+nix flake check --all-systems
+
+# Build for specific architecture
+nix build .#packages.x86_64-linux.piholeImage
+nix build .#packages.aarch64-linux.piholeImage
+
+# Test the module
+nix eval .#nixosModules.default --apply 'x: "success"'
+
+# Check code formatting
+nix-shell -p nixpkgs-fmt --run "nixpkgs-fmt --check ."
+
+# Auto-fix formatting issues
+nix-shell -p nixpkgs-fmt --run "nixpkgs-fmt ."
+
+# Run linter
+nix-shell -p statix --run "statix check ."
+
+# Auto-fix linting issues
+nix-shell -p statix --run "statix fix ."
+
+# Check for dead code
+nix-shell -p deadnix --run "deadnix ."
+
+# Enter development shell
+nix develop
+```
+
+### Code Formatting
+
+This project uses **nixpkgs-fmt** as the standard Nix code formatter. All Nix files should be formatted before committing.
+
+**Format all Nix files:**
+```bash
+nix-shell -p nixpkgs-fmt --run "nixpkgs-fmt ."
+```
+
+**Check formatting in CI:**
+The CI pipeline automatically checks code formatting using:
+- `nixpkgs-fmt` - Official nixpkgs formatter (required)
+- `statix` - Nix linter for best practices (required)
+- `deadnix` - Detects unused code (required)
+- `alejandra` - Alternative formatter (informational)
+- `nixfmt-rfc-style` - RFC-style formatter (informational)
+
+### Contributing
+
+When contributing:
+
+1. Ensure `nix flake check` passes
+2. **Format your code** with `nixpkgs-fmt .`
+3. Run `statix check .` to verify code quality
+4. Update documentation if needed
+5. Test on both architectures when possible
+6. Follow conventional commit messages
+
