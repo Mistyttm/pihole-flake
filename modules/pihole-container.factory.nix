@@ -1,6 +1,5 @@
 {
   piholeFlake,
-  lingerFlake,
 }: {
   config,
   pkgs,
@@ -365,10 +364,7 @@ in rec {
         Otherwise you can also set `services.pihole.hostConfig.suppressTmpDirWarning` to `true` to disable the warning.
       '');
 
-    services.linger = mkIf (cfg.hostConfig.enableLingeringForUser == true) {
-      enable = true;
-      users = [cfg.hostConfig.user];
-    };
+    users.users.${cfg.hostConfig.user}.linger = mkIf (cfg.hostConfig.enableLingeringForUser == true) true;
 
     systemd.services."pihole-rootless-container" = {
       wantedBy = ["multi-user.target"];
