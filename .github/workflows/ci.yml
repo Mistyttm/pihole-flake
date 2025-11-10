@@ -1,0 +1,162 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  nix-flake-check:
+    name: Nix Flake Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v9
+
+      - name: Setup Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@v3
+
+      - name: Check flake
+        run: nix flake check --all-systems
+
+  build-x86_64:
+    name: Build Pi-hole Image (x86_64-linux)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v9
+
+      - name: Setup Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@v3
+
+      - name: Build Pi-hole image for x86_64-linux
+        run: nix build .#packages.x86_64-linux.piholeImage --print-build-logs
+
+  build-aarch64:
+    name: Build Pi-hole Image (aarch64-linux)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v9
+
+      - name: Setup Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@v3
+
+      - name: Setup QEMU for cross-compilation
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qemu-user-static binfmt-support
+
+      - name: Configure Nix for aarch64 builds
+        run: |
+          mkdir -p ~/.config/nix
+          echo "extra-platforms = aarch64-linux" | sudo tee -a /etc/nix/nix.conf
+          sudo systemctl restart nix-daemon
+
+      - name: Build Pi-hole image for aarch64-linux
+        run: nix build .#packages.aarch64-linux.piholeImage --print-build-logs
+
+  test-module:
+    name: Test NixOS Module
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v9
+
+      - name: Setup Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@v3
+
+      - name: Test nixosModule can be evaluated
+        run: |
+          nix eval .#nixosModules.default --apply 'x: "Module loads successfully"'
+
+      - name: Test example configuration syntax
+        run: |
+          cd examples
+          nix flake check --no-build
+
+  format-check:
+    name: Check Nix Formatting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v9
+
+      - name: Setup Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@v3
+
+      - name: Check formatting with nixpkgs-fmt
+        run: |
+          nix-shell -p nixpkgs-fmt --run "nixpkgs-fmt --check ."
+
+      - name: Run statix linter
+        run: |
+          nix-shell -p statix --run "statix check ."
+
+      - name: Check for dead code
+        run: |
+          nix-shell -p deadnix --run "deadnix --fail ."
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v9
+
+      - name: Setup Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@v3
+
+      - name: Check for known vulnerabilities
+        run: |
+          nix-shell -p vulnix --run "vulnix --system x86_64-linux .#packages.x86_64-linux.piholeImage || true"
+        continue-on-error: true
+
+  summary:
+    name: CI Summary
+    runs-on: ubuntu-latest
+    needs: [nix-flake-check, build-x86_64, build-aarch64, test-module, format-check]
+    if: always()
+    steps:
+      - name: Check results
+        run: |
+          echo "CI Pipeline completed"
+          echo "====================="
+          echo "Flake check: ${{ needs.nix-flake-check.result }}"
+          echo "x86_64 build: ${{ needs.build-x86_64.result }}"
+          echo "aarch64 build: ${{ needs.build-aarch64.result }}"
+          echo "Module test: ${{ needs.test-module.result }}"
+          echo "Format check: ${{ needs.format-check.result }}"
+          
+          if [ "${{ needs.nix-flake-check.result }}" != "success" ] || \
+             [ "${{ needs.build-x86_64.result }}" != "success" ] || \
+             [ "${{ needs.build-aarch64.result }}" != "success" ] || \
+             [ "${{ needs.test-module.result }}" != "success" ] || \
+             [ "${{ needs.format-check.result }}" != "success" ]; then
+            echo ""
+            echo "❌ CI pipeline failed"
+            exit 1
+          else
+            echo ""
+            echo "✅ All CI checks passed"
+          fi
