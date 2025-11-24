@@ -134,30 +134,6 @@ jobs:
         run: |
           nix-shell -p deadnix --run "deadnix --fail ."
 
-  security-scan:
-    name: Security Scan
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@v9
-        with:
-          flakehub: false
-          extra-conf: |
-            fallback = true
-            connect-timeout = 10
-            stalled-download-timeout = 10
-
-      - name: Setup Nix cache
-        uses: DeterminateSystems/magic-nix-cache-action@v8
-
-      - name: Check for known vulnerabilities
-        run: |
-          nix-shell -p vulnix --run "vulnix --system x86_64-linux .#packages.x86_64-linux.piholeImage || true"
-        continue-on-error: true
-
   summary:
     name: CI Summary
     runs-on: ubuntu-latest
