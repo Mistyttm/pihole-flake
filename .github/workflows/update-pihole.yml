@@ -19,9 +19,15 @@ jobs:
 
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@v9
+        with:
+          extra-conf: |
+            fallback = true
+            connect-timeout = 10
+            stalled-download-timeout = 10
 
       - name: Setup Nix cache
         uses: DeterminateSystems/magic-nix-cache-action@v8
+        continue-on-error: true
 
       - name: Install dependencies
         run: nix develop
@@ -68,9 +74,15 @@ jobs:
 
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@v9
+        with:
+          extra-conf: |
+            fallback = true
+            connect-timeout = 10
+            stalled-download-timeout = 10
 
       - name: Setup Nix cache
         uses: DeterminateSystems/magic-nix-cache-action@v8
+        continue-on-error: true
 
       - name: Setup QEMU for cross-compilation
         run: |
