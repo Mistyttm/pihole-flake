@@ -18,6 +18,7 @@ jobs:
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@v9
         with:
+          flakehub: false
           extra-conf: |
             fallback = true
             connect-timeout = 10
@@ -39,6 +40,12 @@ jobs:
 
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@v9
+        with:
+          flakehub: false
+          extra-conf: |
+            fallback = true
+            connect-timeout = 10
+            stalled-download-timeout = 10
 
       - name: Setup Nix cache
         uses: DeterminateSystems/magic-nix-cache-action@v8
@@ -55,6 +62,12 @@ jobs:
 
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@v9
+        with:
+          flakehub: false
+          extra-conf: |
+            fallback = true
+            connect-timeout = 10
+            stalled-download-timeout = 10
 
       - name: Setup Nix cache
         uses: DeterminateSystems/magic-nix-cache-action@v8
@@ -71,6 +84,12 @@ jobs:
 
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@v9
+        with:
+          flakehub: false
+          extra-conf: |
+            fallback = true
+            connect-timeout = 10
+            stalled-download-timeout = 10
 
       - name: Setup Nix cache
         uses: DeterminateSystems/magic-nix-cache-action@v8
@@ -93,6 +112,12 @@ jobs:
 
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@v9
+        with:
+          flakehub: false
+          extra-conf: |
+            fallback = true
+            connect-timeout = 10
+            stalled-download-timeout = 10
 
       - name: Setup Nix cache
         uses: DeterminateSystems/magic-nix-cache-action@v8
@@ -118,6 +143,12 @@ jobs:
 
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@v9
+        with:
+          flakehub: false
+          extra-conf: |
+            fallback = true
+            connect-timeout = 10
+            stalled-download-timeout = 10
 
       - name: Setup Nix cache
         uses: DeterminateSystems/magic-nix-cache-action@v8

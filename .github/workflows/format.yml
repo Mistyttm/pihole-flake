@@ -17,9 +17,15 @@ jobs:
 
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@v9
+        with:
+          flakehub: false
+          extra-conf: |
+            fallback = true
+            connect-timeout = 10
+            stalled-download-timeout = 10
 
       - name: Setup Nix cache
-        uses: DeterminateSystems/magic-nix-cache-action@v3
+        uses: DeterminateSystems/magic-nix-cache-action@v8
 
       - name: Check formatting with nixpkgs-fmt
         run: |
@@ -34,9 +40,15 @@ jobs:
 
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@v9
+        with:
+          flakehub: false
+          extra-conf: |
+            fallback = true
+            connect-timeout = 10
+            stalled-download-timeout = 10
 
       - name: Setup Nix cache
-        uses: DeterminateSystems/magic-nix-cache-action@v3
+        uses: DeterminateSystems/magic-nix-cache-action@v8
 
       - name: Check formatting with alejandra
         run: |
@@ -52,9 +64,15 @@ jobs:
 
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@v9
+        with:
+          flakehub: false
+          extra-conf: |
+            fallback = true
+            connect-timeout = 10
+            stalled-download-timeout = 10
 
       - name: Setup Nix cache
-        uses: DeterminateSystems/magic-nix-cache-action@v3
+        uses: DeterminateSystems/magic-nix-cache-action@v8
 
       - name: Check formatting with nixfmt
         run: |
@@ -70,9 +88,15 @@ jobs:
 
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@v9
+        with:
+          flakehub: false
+          extra-conf: |
+            fallback = true
+            connect-timeout = 10
+            stalled-download-timeout = 10
 
       - name: Setup Nix cache
-        uses: DeterminateSystems/magic-nix-cache-action@v3
+        uses: DeterminateSystems/magic-nix-cache-action@v8
 
       - name: Run statix linter
         run: |
@@ -87,9 +111,15 @@ jobs:
 
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@v9
+        with:
+          flakehub: false
+          extra-conf: |
+            fallback = true
+            connect-timeout = 10
+            stalled-download-timeout = 10
 
       - name: Setup Nix cache
-        uses: DeterminateSystems/magic-nix-cache-action@v3
+        uses: DeterminateSystems/magic-nix-cache-action@v8
 
       - name: Check for dead code
         run: |

@@ -20,6 +20,7 @@ jobs:
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@v9
         with:
+          flakehub: false
           extra-conf: |
             fallback = true
             connect-timeout = 10
@@ -75,6 +76,7 @@ jobs:
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@v9
         with:
+          flakehub: false
           extra-conf: |
             fallback = true
             connect-timeout = 10
