@@ -19,7 +19,7 @@ jobs:
         uses: DeterminateSystems/nix-installer-action@v9
 
       - name: Setup Nix cache
-        uses: DeterminateSystems/magic-nix-cache-action@v3
+        uses: DeterminateSystems/magic-nix-cache-action@v8
 
       - name: Check flake
         run: nix flake check --all-systems
@@ -35,7 +35,7 @@ jobs:
         uses: DeterminateSystems/nix-installer-action@v9
 
       - name: Setup Nix cache
-        uses: DeterminateSystems/magic-nix-cache-action@v3
+        uses: DeterminateSystems/magic-nix-cache-action@v8
 
       - name: Build Pi-hole image for x86_64-linux
         run: nix build .#packages.x86_64-linux.piholeImage --print-build-logs
@@ -51,7 +51,7 @@ jobs:
         uses: DeterminateSystems/nix-installer-action@v9
 
       - name: Setup Nix cache
-        uses: DeterminateSystems/magic-nix-cache-action@v3
+        uses: DeterminateSystems/magic-nix-cache-action@v8
 
       - name: Setup QEMU for cross-compilation
         run: |
@@ -78,7 +78,7 @@ jobs:
         uses: DeterminateSystems/nix-installer-action@v9
 
       - name: Setup Nix cache
-        uses: DeterminateSystems/magic-nix-cache-action@v3
+        uses: DeterminateSystems/magic-nix-cache-action@v8
 
       - name: Test nixosModule can be evaluated
         run: |
@@ -100,7 +100,7 @@ jobs:
         uses: DeterminateSystems/nix-installer-action@v9
 
       - name: Setup Nix cache
-        uses: DeterminateSystems/magic-nix-cache-action@v3
+        uses: DeterminateSystems/magic-nix-cache-action@v8
 
       - name: Check formatting with nixpkgs-fmt
         run: |
@@ -125,7 +125,7 @@ jobs:
         uses: DeterminateSystems/nix-installer-action@v9
 
       - name: Setup Nix cache
-        uses: DeterminateSystems/magic-nix-cache-action@v3
+        uses: DeterminateSystems/magic-nix-cache-action@v8
 
       - name: Check for known vulnerabilities
         run: |
@@ -154,9 +154,9 @@ jobs:
              [ "${{ needs.test-module.result }}" != "success" ] || \
              [ "${{ needs.format-check.result }}" != "success" ]; then
             echo ""
-            echo "❌ CI pipeline failed"
+            echo "CI pipeline failed"
             exit 1
           else
             echo ""
-            echo "✅ All CI checks passed"
+            echo "All CI checks passed"
           fi

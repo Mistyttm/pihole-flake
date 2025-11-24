@@ -36,9 +36,11 @@ jobs:
       - name: Check latest version
         id: latest
         run: |
-          LATEST_VERSION=$(nix-shell --run "skopeo inspect docker://pihole/pihole:latest | jq -r '.Labels.\"org.opencontainers.image.version\"'")
-          echo "latest-version=$LATEST_VERSION" >> $GITHUB_OUTPUT
-          echo "Latest Pi-hole version: $LATEST_VERSION"
+          nix develop --command sh -c '
+            LATEST_VERSION=$(skopeo inspect docker://pihole/pihole:latest | jq -r ".Labels.\"org.opencontainers.image.version\"")
+            echo "latest-version=$LATEST_VERSION" >> $GITHUB_OUTPUT
+            echo "Latest Pi-hole version: $LATEST_VERSION"
+          '
 
       - name: Compare versions
         id: check
@@ -49,10 +51,10 @@ jobs:
           if [ "$CURRENT" != "$LATEST" ]; then
             echo "has-update=true" >> $GITHUB_OUTPUT
             echo "new-version=$LATEST" >> $GITHUB_OUTPUT
-            echo "✅ New version available: $LATEST (current: $CURRENT)"
+            echo "New version available: $LATEST (current: $CURRENT)"
           else
             echo "has-update=false" >> $GITHUB_OUTPUT
-            echo "ℹ️ Already on latest version: $CURRENT"
+            echo "Already on latest version: $CURRENT"
           fi
 
   update-images:
@@ -107,7 +109,7 @@ jobs:
           commit-message: "chore: update Pi-hole to version ${{ needs.check-updates.outputs.new-version }}"
           title: "Update Pi-hole to version ${{ needs.check-updates.outputs.new-version }}"
           body: |
-            ## 🚀 Automated Pi-hole Update
+            ## Automated Pi-hole Update
             
             This PR updates the Pi-hole container image to version **${{ needs.check-updates.outputs.new-version }}**.
             
@@ -116,8 +118,8 @@ jobs:
             - Updated `pihole-image-info.arm64.nix` with new image digest and hash
             
             ### Testing
-            - ✅ Image info files updated successfully
-            - ✅ x86_64 build test passed
+            - Image info files updated successfully
+            - x86_64 build test passed
             
             ### Review Checklist
             - [ ] Verify image versions are correct
