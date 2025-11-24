@@ -24,7 +24,7 @@ jobs:
         uses: DeterminateSystems/magic-nix-cache-action@v3
 
       - name: Install dependencies
-        run: nix-shell --run "echo 'Dependencies installed'"
+        run: nix develop
 
       - name: Check current version
         id: current
