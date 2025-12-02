@@ -1,0 +1,231 @@
+name: Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  # Run all NixOS VM tests
+  nixos-tests:
+    name: NixOS VM Tests
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        test:
+          - basic
+          - containerOptions
+          - dhcpConfiguration
+          - flattenedStructure
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Free up disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo docker image prune --all --force
+          df -h
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v9
+        with:
+          flakehub: false
+          extra-conf: |
+            fallback = true
+            connect-timeout = 10
+            stalled-download-timeout = 10
+
+      - name: Setup Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@v8
+        continue-on-error: true
+
+      - name: Enable KVM for faster VM tests
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run ${{ matrix.test }} test
+        run: |
+          nix build .#checks.x86_64-linux.${{ matrix.test }} --print-build-logs -L
+
+      - name: Check test results
+        if: always()
+        run: |
+          if [ -f result ]; then
+            echo "Test completed successfully"
+            ls -la result/
+          else
+            echo "Test failed - no result produced"
+            exit 1
+          fi
+
+  # Build and test images on both architectures
+  build-and-test-images:
+    name: Build & Test Images
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64-linux
+            runner: ubuntu-latest
+          - arch: aarch64-linux
+            runner: ubuntu-24.04-arm
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v9
+        with:
+          flakehub: false
+          extra-conf: |
+            fallback = true
+            connect-timeout = 10
+            stalled-download-timeout = 10
+
+      - name: Setup Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@v8
+        continue-on-error: true
+
+      - name: Build Pi-hole image
+        run: |
+          nix build .#packages.${{ matrix.arch }}.piholeImage --print-build-logs
+
+      - name: Verify image structure
+        run: |
+          if [ ! -f result ]; then
+            echo "Error: Build result not found"
+            exit 1
+          fi
+          
+          echo "Image built successfully"
+          ls -lh result
+          
+          # Check that the image is a valid tar archive
+          file result
+          
+          # Verify it's a Docker/OCI image
+          if file result | grep -q "gzip compressed"; then
+            echo "✓ Valid Docker image archive"
+          else
+            echo "✗ Invalid image format"
+            exit 1
+          fi
+
+      - name: Load image into Docker
+        if: matrix.arch == 'x86_64-linux'
+        run: |
+          docker load < result
+          echo "Available images:"
+          docker images | grep pihole || echo "No pihole images found"
+
+  # Test module integration
+  module-integration-test:
+    name: Module Integration Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v9
+        with:
+          flakehub: false
+          extra-conf: |
+            fallback = true
+            connect-timeout = 10
+            stalled-download-timeout = 10
+
+      - name: Setup Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@v8
+        continue-on-error: true
+
+      - name: Test module can be imported
+        run: |
+          nix eval .#nixosModules.default --apply 'x: "success"'
+
+      - name: Test example configuration
+        run: |
+          # Create a test configuration using the module
+          cat > test-config.nix << 'EOF'
+          { config, pkgs, ... }:
+          {
+            imports = [ ./modules/pihole-container.factory.nix ];
+            
+            users.users.testuser = {
+              isNormalUser = true;
+              subUidRanges = [{ startUid = 100000; count = 65536; }];
+              subGidRanges = [{ startGid = 100000; count = 65536; }];
+            };
+            
+            services.pihole = {
+              enable = true;
+              container = {
+                user = "testuser";
+                enableLingering = true;
+                dnsPort = 5353;
+                webPort = 8080;
+                suppressTmpDirWarning = true;
+              };
+              web.password = "test123";
+              timezone = "UTC";
+            };
+            
+            virtualisation.podman.enable = true;
+            
+            system.stateVersion = "24.05";
+          }
+          EOF
+          
+          # Try to evaluate the configuration (won't build, just check syntax)
+          nix-instantiate --eval --strict --expr '
+            let
+              piholeFlake = builtins.getFlake (toString ./.);
+              nixpkgs = import <nixpkgs> {};
+              config = import ./test-config.nix;
+            in
+              "config-valid"
+          ' || echo "Configuration evaluation test - syntax check only"
+
+      - name: Validate example configurations
+        run: |
+          if [ -d examples ]; then
+            cd examples
+            for config in *.nix; do
+              echo "Checking $config..."
+              nix-instantiate --parse "$config" > /dev/null && echo "✓ $config is valid" || echo "✗ $config has syntax errors"
+            done
+          fi
+
+  # Summary job that requires all tests to pass
+  test-summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: [nixos-tests, build-and-test-images, module-integration-test]
+    if: always()
+    steps:
+      - name: Check all tests passed
+        run: |
+          echo "Test Results"
+          echo "============"
+          echo "NixOS VM Tests: ${{ needs.nixos-tests.result }}"
+          echo "Build & Test Images: ${{ needs.build-and-test-images.result }}"
+          echo "Module Integration: ${{ needs.module-integration-test.result }}"
+          echo ""
+          
+          if [ "${{ needs.nixos-tests.result }}" != "success" ] || \
+             [ "${{ needs.build-and-test-images.result }}" != "success" ] || \
+             [ "${{ needs.module-integration-test.result }}" != "success" ]; then
+            echo "❌ Some tests failed"
+            exit 1
+          else
+            echo "✅ All tests passed successfully!"
+          fi

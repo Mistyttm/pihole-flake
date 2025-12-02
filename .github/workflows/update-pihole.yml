@@ -116,7 +116,13 @@ jobs:
         run: |
           nix build .#packages.x86_64-linux.piholeImage --print-build-logs
 
+      - name: Run quick integration tests
+        run: |
+          # Run basic test to ensure the module still works
+          nix build .#checks.x86_64-linux.basic --print-build-logs -L
+
       - name: Create Pull Request
+        id: create-pr
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -148,3 +154,10 @@ jobs:
             automated
             dependencies
             pihole-update
+
+      - name: Enable auto-merge
+        if: steps.create-pr.outputs.pull-request-number != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr merge ${{ steps.create-pr.outputs.pull-request-number }} --auto --squash --delete-branch
