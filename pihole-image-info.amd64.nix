@@ -1,7 +1,7 @@
 {
   imageName = "pihole/pihole";
-  imageDigest = "sha256:e28e239f55e648a9d32c8f065650acfe987ddebf1cd5f64f1c071e8716156ceb";
-  hash = "sha256-ZGO9j3tstJO4Wf7tF0/+Cpk8Zz3kgCVSBykT6t4xOXg=";
+  imageDigest = "sha256:91dc91ddd413bf461c283204558f8f21839851e9824799075a7ceff7c77eea40";
+  hash = "sha256-0CYHbyO4MgCwmr2vpaIurQhweK8IkiM61uiWIrJFumM=";
   finalImageName = "pihole/pihole";
-  finalImageTag = "2025.11.0";
+  finalImageTag = "2025.11.1";
 }
